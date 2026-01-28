@@ -101,7 +101,7 @@ class MarkdownFormatter:
         if output_path:
             output_path = Path(output_path)
             output_path.write_text(markdown, encoding="utf-8")
-            print(f"Summary saved to: {output_path}")
+            print(f"Summary saved to: {output_path.name.encode('ascii', 'ignore').decode()}")
         
         return markdown
     

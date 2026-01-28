@@ -47,8 +47,10 @@ class VideoSummarizerPipeline:
         # Initialize components
         self.metadata_extractor = MetadataExtractor()
         self.audio_extractor = AudioExtractor(
-            api_base="http://127.0.0.1:18181/v1/audio",
-            cache_dir=self.config.cache_dir
+            api_base=self.config.whisper_base_url,
+            api_key=self.config.whisper_api_key,
+            cache_dir=self.config.cache_dir,
+            model=self.config.whisper_model
         )
         self.frame_extractor = FrameExtractor(
             cache_dir=f"{self.config.cache_dir}/frames",
@@ -79,23 +81,23 @@ class VideoSummarizerPipeline:
         video_path = Path(video_path)
         
         print(f"\n{'='*60}")
-        print(f"视频摘要生成")
+        print("Video Summarizer")
         print(f"{'='*60}")
-        print(f"文件: {video_path}")
+        print(f"File: {video_path.name.encode('ascii', 'ignore').decode()}")
         print()
         
         # Step 1: Extract metadata
-        print("[1/6] 提取视频元信息...")
+        print("[1/6] Extracting metadata...")
         metadata = self.metadata_extractor.extract(video_path)
-        print(f"      时长: {metadata.duration:.1f}s, 分辨率: {metadata.width}x{metadata.height}")
+        print(f"      Duration: {metadata.duration:.1f}s, Resolution: {metadata.width}x{metadata.height}")
         print()
         
         # Step 2: Transcribe audio
-        print("[2/6] 提取音频并转录...")
+        print("[2/6] Transcribing audio...")
         try:
             transcript_segments = self.audio_extractor.extract_transcript(video_path)
             full_transcript = " ".join([s.text for s in transcript_segments])
-            print(f"      识别到 {len(transcript_segments)} 个语音片段")
+            print(f"      Found {len(transcript_segments)} speech segments")
         except ConnectionError as e:
             print(f"      警告: 无法连接 Whisper 服务 ({e})")
             print("      将继续使用空字幕...")
@@ -105,27 +107,27 @@ class VideoSummarizerPipeline:
         
         # Step 3: Process video
         if metadata.duration > self.config.segment_duration:
-            print(f"[3/6] 视频较长，分段处理...")
+            print(f"[3/6] Long video, processing in segments...")
             chapters = self._process_long_video(
                 video_path, transcript_segments, metadata.duration
             )
         else:
-            print(f"[3/6] 分析视频章节...")
+            print(f"[3/6] Analyzing chapters...")
             chapters = self._process_segment(
                 video_path, transcript_segments, 0, metadata.duration
             )
         
-        print(f"      检测到 {len(chapters)} 个章节")
+        print(f"      Detected {len(chapters)} chapters")
         print()
         
         # Step 4: Generate overall summary
-        print("[4/6] 生成整体摘要...")
+        print("[4/6] Generating overall summary...")
         overall_summary = self._generate_overall_summary(chapters, full_transcript)
         print(f"      {overall_summary[:100]}...")
         print()
         
         # Step 5: Format output
-        print("[5/6] 格式化输出...")
+        print("[5/6] Formatting output...")
         if output_path is None:
             output_path = Path(self.config.output_dir) / f"{video_path.stem}_summary.md"
         else:
@@ -142,7 +144,7 @@ class VideoSummarizerPipeline:
         
         # Step 6: Done
         processing_time = time.time() - start_time
-        print(f"[6/6] 完成! 总耗时: {processing_time:.1f}秒")
+        print(f"[6/6] Done! Total time: {processing_time:.1f}s")
         print(f"{'='*60}\n")
         
         return VideoSummaryResult(
@@ -240,7 +242,7 @@ class VideoSummarizerPipeline:
         
         for i, seg_start in enumerate(segment_starts):
             seg_end = min(seg_start + segment_length, duration)
-            print(f"      处理分段 {i+1}/{len(segment_starts)}: {seg_start:.0f}s-{seg_end:.0f}s")
+            print(f"      Processing segment {i+1}/{len(segment_starts)}: {seg_start:.0f}s-{seg_end:.0f}s")
             
             chapters = self._process_segment(
                 video_path, transcript_segments, seg_start, seg_end

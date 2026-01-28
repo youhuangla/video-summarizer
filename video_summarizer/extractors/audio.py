@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Union, List, Dict, Optional
 
 
-WHISPER_API_BASE = "http://127.0.0.1:18181/v1/audio"
+WHISPER_API_BASE = "http://127.0.0.1:18181/v1"
 
 
 class TranscriptSegment:

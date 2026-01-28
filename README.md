@@ -1,6 +1,6 @@
 # Video Summarizer
 
-使用 **Kimi VLM** 生成带时间戳的 **Markdown** 视频摘要。
+使用 **本地 VLM** (OpenAI 兼容 API) 生成带时间戳的 **Markdown** 视频摘要。
 
 基于 [Video-Browser](https://github.com/chrisx599/Video-Browser) 论文的**金字塔感知架构**实现：
 - **Stage 1**: 稀疏采样识别章节边界

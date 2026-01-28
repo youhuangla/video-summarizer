@@ -54,8 +54,9 @@ class VideoSummarizerPipeline:
             cache_dir=f"{self.config.cache_dir}/frames"
         )
         self.chapter_analyzer = ChapterAnalyzer(
-            api_key=self.config.kimi_api_key,
-            base_url=self.config.kimi_base_url
+            api_key=self.config.api_key,
+            base_url=self.config.base_url,
+            model=self.config.model
         )
         self.formatter = MarkdownFormatter()
     

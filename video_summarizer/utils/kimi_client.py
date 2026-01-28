@@ -22,24 +22,35 @@ class KimiClient:
     def __init__(
         self,
         api_key: str,
-        base_url: str = "https://api.moonshot.cn/v1",
-        model: str = "kimi-vl-a3b-thinking-250701"
+        base_url: str = "http://127.0.0.1:1234/v1",
+        model: str = None
     ):
-        """Initialize Kimi client.
+        """Initialize OpenAI-compatible client.
         
         Args:
-            api_key: Kimi API key
+            api_key: API key (use "EMPTY" for local APIs)
             base_url: API base URL
-            model: Model name
+            model: Model name (if None, will be auto-detected)
         """
         if not OPENAI_AVAILABLE:
             raise ImportError("openai is required. Install: uv pip install openai")
         
         if not api_key:
-            raise ValueError("API key is required")
+            api_key = "EMPTY"
         
+        self.api_key = api_key
         self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
+        
+        # Auto-detect model if not specified
+        if self.model is None:
+            try:
+                models = self.client.models.list()
+                if models.data:
+                    self.model = models.data[0].id
+                    print(f"Auto-detected model: {self.model}")
+            except Exception:
+                self.model = "default"
     
     def analyze_images(
         self,

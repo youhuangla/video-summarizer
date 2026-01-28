@@ -27,14 +27,15 @@ class Chapter:
 class ChapterAnalyzer:
     """Analyze video and generate chapter summaries."""
     
-    def __init__(self, api_key: str, base_url: str = "https://api.moonshot.cn/v1"):
+    def __init__(self, api_key: str, base_url: str = "http://127.0.0.1:1234/v1", model: str = None):
         """Initialize analyzer.
         
         Args:
-            api_key: Kimi API key
+            api_key: API key (can be "EMPTY" for local APIs)
             base_url: API base URL
+            model: Model name (optional)
         """
-        self.kimi = KimiClient(api_key=api_key, base_url=base_url)
+        self.kimi = KimiClient(api_key=api_key, base_url=base_url, model=model)
     
     def detect_chapters(
         self,

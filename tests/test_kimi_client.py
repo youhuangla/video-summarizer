@@ -6,30 +6,30 @@ from video_summarizer.utils.kimi_client import KimiClient
 
 
 def test_kimi_client_init():
-    """Test KimiClient initialization."""
+    """Test OpenAI client initialization."""
     client = KimiClient(
         api_key="test-key",
-        base_url="https://test.com",
+        base_url="http://localhost:1234/v1",
         model="test-model"
     )
     assert client.model == "test-model"
     assert client.client is not None
 
 
-def test_kimi_client_no_api_key():
-    """Test that empty API key raises error."""
-    with pytest.raises(ValueError, match="API key is required"):
-        KimiClient(api_key="")
+def test_kimi_client_empty_key_defaults():
+    """Test that empty API key defaults to EMPTY."""
+    client = KimiClient(api_key="")
+    assert client.api_key == "EMPTY"
 
 
 def test_kimi_client_custom_config():
     """Test custom configuration."""
     client = KimiClient(
         api_key="custom-key",
-        base_url="https://custom.moonshot.cn/v1",
-        model="kimi-custom"
+        base_url="http://localhost:8000/v1",
+        model="qwen-vl"
     )
-    assert client.model == "kimi-custom"
+    assert client.model == "qwen-vl"
 
 
 def test_encode_image(tmp_path):

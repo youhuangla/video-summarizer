@@ -8,7 +8,7 @@ from video_summarizer.config import SummarizerConfig
 
 def test_pipeline_init():
     """Test pipeline initialization."""
-    config = SummarizerConfig(kimi_api_key="test")
+    config = SummarizerConfig(api_key="test")
     pipeline = VideoSummarizerPipeline(config)
     assert pipeline is not None
     assert pipeline.config == config
@@ -16,7 +16,7 @@ def test_pipeline_init():
 
 def test_fmt_time():
     """Test time formatting helper."""
-    config = SummarizerConfig(kimi_api_key="test-key")
+    config = SummarizerConfig(api_key="test-key")
     pipeline = VideoSummarizerPipeline(config)
     assert pipeline._fmt_time(125.5) == "02:05"
     assert pipeline._fmt_time(60) == "01:00"
@@ -25,7 +25,7 @@ def test_fmt_time():
 
 def test_merge_short_chapters():
     """Test merging short chapters."""
-    config = SummarizerConfig(kimi_api_key="test-key")
+    config = SummarizerConfig(api_key="test-key")
     pipeline = VideoSummarizerPipeline(config)
     
     chapters = [

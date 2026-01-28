@@ -20,10 +20,10 @@ class SummarizerConfig:
     - Stage 2: Dense sampling within chapters for detailed summary
     """
     
-    # API Configuration
-    kimi_api_key: str = ""
-    kimi_base_url: str = "https://api.moonshot.cn/v1"
-    kimi_model: str = "kimi-vl-a3b-thinking-250701"
+    # API Configuration (Local OpenAI-compatible API)
+    api_key: str = "EMPTY"  # Local APIs often don't need real key
+    base_url: str = "http://127.0.0.1:1234/v1"
+    model: str = "Qwen3vl-30B-instruct-XH-NL"
     
     # Video Processing
     segment_duration: int = 600  # Split videos longer than 10 minutes
@@ -39,8 +39,16 @@ class SummarizerConfig:
     enable_cache: bool = True
     
     def __post_init__(self):
-        if not self.kimi_api_key:
-            self.kimi_api_key = os.getenv("KIMI_API_KEY", "")
+        # Allow overriding via environment variables
+        env_key = os.getenv("OPENAI_API_KEY")
+        if env_key:
+            self.api_key = env_key
+        env_url = os.getenv("OPENAI_BASE_URL")
+        if env_url:
+            self.base_url = env_url
+        env_model = os.getenv("MODEL_NAME")
+        if env_model:
+            self.model = env_model
         
         # Create directories
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)

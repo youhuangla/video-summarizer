@@ -41,22 +41,22 @@ def get_video_path() -> Path:
 
 
 def get_api_key() -> str:
-    """Get Kimi API key."""
+    """Get API key (for local API, can use EMPTY)."""
     # Check environment first
-    api_key = os.getenv("KIMI_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     
     if api_key:
-        masked = api_key[:8] + "..." + api_key[-4:]
+        masked = api_key[:8] + "..." + api_key[-4:] if len(api_key) > 12 else api_key
         print(f"从环境变量读取到 API Key: {masked}")
-        use_env = input("使用此 API Key? (y/n): ").lower()
-        if use_env == 'y':
+        use_env = input("使用此 API Key? (y/n, 或直接回车跳过): ").lower()
+        if use_env == 'y' or use_env == '':
             return api_key
     
-    # Prompt user
-    api_key = input("请输入 Kimi API Key: ").strip()
+    # For local API, default to EMPTY
+    default_key = "EMPTY"
+    api_key = input(f"请输入 API Key (直接回车使用 '{default_key}' 用于本地API): ").strip()
     if not api_key:
-        print("错误: API Key 不能为空")
-        sys.exit(1)
+        api_key = default_key
     
     return api_key
 

@@ -1,27 +1,25 @@
-"""Audio extraction and transcription using Whisper.
+"""Audio extraction and transcription.
 
-Supports:
-1. Local Whisper HTTP API (Whisper.cpp Server)
-2. Direct whisper library (fallback)
+Extracts audio from video using FFmpeg (via pydub),
+then transcribes using Whisper HTTP API.
 """
 
 import hashlib
 import json
 import requests
+import subprocess
 from pathlib import Path
 from typing import Union, List, Dict, Optional
 
 try:
-    import whisper
-    WHISPER_AVAILABLE = True
+    from pydub import AudioSegment
+    PYDUB_AVAILABLE = True
 except ImportError:
-    WHISPER_AVAILABLE = False
+    PYDUB_AVAILABLE = False
 
 
-# Default Whisper API (OpenAI compatible)
-WHISPER_API_BASE = "http://127.0.0.1:8281/v1"  # NovaAI Whisper API
+WHISPER_API_BASE = "http://127.0.0.1:18181/v1"  # Direct whisper.cpp API
 WHISPER_MODEL = "whisper-1"
-WHISPER_API_KEY = "novaai"
 
 
 class TranscriptSegment:
@@ -39,46 +37,41 @@ class TranscriptSegment:
 class AudioExtractor:
     """Extract and transcribe audio from video files.
     
-    Tries HTTP API first, falls back to local whisper library.
-    Results are cached to avoid re-processing the same video.
+    1. Extracts audio from video using FFmpeg (pydub)
+    2. Transcribes using Whisper HTTP API
     """
     
     def __init__(
         self,
         api_base: str = WHISPER_API_BASE,
-        api_key: str = WHISPER_API_KEY,
+        api_key: str = "",
         cache_dir: str = "./cache",
         model: str = WHISPER_MODEL
     ):
         """Initialize audio extractor.
         
         Args:
-            api_base: Base URL for Whisper API (OpenAI compatible)
-            api_key: API key for Whisper API
+            api_base: Base URL for Whisper API
+            api_key: API key (optional for local)
             cache_dir: Directory to cache transcription results
-            model: Whisper model to use
+            model: Whisper model name
         """
         self.api_base = api_base.rstrip('/')
         self.api_key = api_key
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.model = model
-        self._whisper_model = None
-    
-    @property
-    def whisper_model(self):
-        """Lazy load whisper model."""
-        if self._whisper_model is None and WHISPER_AVAILABLE:
-            print(f"Loading Whisper model: {self.model}...")
-            self._whisper_model = whisper.load_model(self.model)
-        return self._whisper_model
+        
+        # Audio extraction cache
+        self.audio_cache_dir = Path(cache_dir) / "audio"
+        self.audio_cache_dir.mkdir(parents=True, exist_ok=True)
     
     def extract_transcript(
         self,
         video_path: Union[str, Path],
         video_id: str = None
     ) -> List[TranscriptSegment]:
-        """Extract transcript from video using local Whisper API.
+        """Extract transcript from video.
         
         Args:
             video_path: Path to video file
@@ -93,45 +86,94 @@ class AudioExtractor:
         if video_id is None:
             video_id = self._compute_video_id(video_path)
         
-        # Check cache
+        # Check transcript cache
         cache_file = self.cache_dir / f"{video_id}_transcript.json"
         if cache_file.exists():
-            print(f"Loading cached transcript...")
+            print("Loading cached transcript...")
             return self._load_from_cache(cache_file)
         
-        # Try HTTP API first, then fall back to local whisper
-        segments = self._call_whisper_api(video_path)
+        # Step 1: Extract audio from video
+        print("Extracting audio from video...")
+        audio_path = self._extract_audio(video_path, video_id)
+        if not audio_path:
+            print("Warning: Failed to extract audio")
+            return []
         
-        # If API failed or returned empty, try local whisper
-        if not segments and WHISPER_AVAILABLE:
-            print("API returned empty result, trying local whisper...")
-            segments = self._call_local_whisper(video_path)
+        # Step 2: Transcribe audio
+        print("Transcribing audio...")
+        segments = self._call_whisper_api(audio_path)
         
         # Save to cache
-        self._save_to_cache(cache_file, segments)
+        if segments:
+            self._save_to_cache(cache_file, segments)
         
         return segments
     
-    def _call_whisper_api(self, video_path: Path) -> List[TranscriptSegment]:
-        """Call Whisper API (OpenAI compatible) to transcribe video.
+    def _extract_audio(self, video_path: Path, video_id: str) -> Optional[Path]:
+        """Extract audio from video file using FFmpeg.
         
-        API Endpoint: POST /v1/audio/transcriptions
-        Compatible with NovaAI Whisper API and OpenAI API.
+        Args:
+            video_path: Path to video file
+            video_id: Video ID for caching
+            
+        Returns:
+            Path to extracted audio file (WAV format)
         """
-        # Try NovaAI proxy first, then fallback to direct whisper.cpp
-        if self.api_base == "http://127.0.0.1:8281/v1":
-            # NovaAI proxy forwards to http://127.0.0.1:18181
-            # Use direct whisper.cpp endpoint
-            url = "http://127.0.0.1:18181/v1/audio/transcriptions"
-        else:
-            url = f"{self.api_base}/audio/transcriptions"
+        # Check if audio already extracted
+        audio_path = self.audio_cache_dir / f"{video_id}.wav"
+        if audio_path.exists():
+            print(f"Using cached audio: {audio_path}")
+            return audio_path
         
-        headers = {
-            "Authorization": f"Bearer {self.api_key}"
-        }
+        try:
+            # Use FFmpeg to extract audio
+            cmd = [
+                "ffmpeg",
+                "-i", str(video_path),
+                "-vn",  # No video
+                "-acodec", "pcm_s16le",  # PCM 16-bit
+                "-ar", "16000",  # 16kHz (Whisper optimal)
+                "-ac", "1",  # Mono
+                "-y",  # Overwrite
+                str(audio_path)
+            ]
+            
+            print(f"Running: ffmpeg -i {video_path.name} ...")
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            
+            if result.returncode == 0 and audio_path.exists():
+                print(f"Audio extracted: {audio_path}")
+                return audio_path
+            else:
+                print(f"FFmpeg error: {result.stderr[:200]}")
+                return None
+                
+        except Exception as e:
+            print(f"Error extracting audio: {e}")
+            return None
+    
+    def _call_whisper_api(self, audio_path: Path) -> List[TranscriptSegment]:
+        """Call Whisper HTTP API to transcribe audio.
         
-        with open(video_path, "rb") as f:
-            files = {"file": (video_path.name, f, "video/mp4")}
+        Args:
+            audio_path: Path to audio file (WAV)
+            
+        Returns:
+            List of transcript segments
+        """
+        url = f"{self.api_base}/audio/transcriptions"
+        
+        headers = {}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        
+        with open(audio_path, "rb") as f:
+            files = {"file": (audio_path.name, f, "audio/wav")}
             data = {
                 "model": self.model,
                 "language": "zh",
@@ -142,7 +184,7 @@ class AudioExtractor:
                 response = requests.post(url, headers=headers, files=files, data=data, timeout=600)
                 response.raise_for_status()
             except requests.exceptions.ConnectionError as e:
-                print(f"Warning: Cannot connect to Whisper API at {self.api_base}: {e}")
+                print(f"Warning: Cannot connect to Whisper API: {e}")
                 return []
             except requests.exceptions.Timeout:
                 print("Warning: Whisper API request timed out.")
@@ -150,10 +192,8 @@ class AudioExtractor:
         
         result = response.json()
         
-        # Parse result (OpenAI compatible format)
+        # Parse segments
         segments = []
-        
-        # Check if result has segments (verbose format)
         if "segments" in result and result["segments"]:
             for seg in result["segments"]:
                 segments.append(TranscriptSegment(
@@ -161,34 +201,11 @@ class AudioExtractor:
                     end=seg.get("end", 0),
                     text=seg.get("text", "").strip()
                 ))
-        # Check if result has text field (simple format)
         elif "text" in result and result["text"]:
             segments.append(TranscriptSegment(
                 start=0.0,
                 end=0.0,
                 text=result["text"].strip()
-            ))
-        
-        return segments
-    
-    def _call_local_whisper(self, video_path: Path) -> List[TranscriptSegment]:
-        """Call local whisper library to transcribe video.
-        
-        Fallback when HTTP API fails.
-        """
-        if not WHISPER_AVAILABLE:
-            raise ImportError("whisper library not available. Install: uv pip install openai-whisper")
-        
-        print(f"Transcribing with local whisper model: {self.model}")
-        result = self.whisper_model.transcribe(str(video_path), language="zh")
-        
-        # Parse segments
-        segments = []
-        for seg in result.get("segments", []):
-            segments.append(TranscriptSegment(
-                start=seg.get("start", 0),
-                end=seg.get("end", 0),
-                text=seg.get("text", "").strip()
             ))
         
         return segments
@@ -199,16 +216,7 @@ class AudioExtractor:
         start_time: float = 0,
         end_time: float = None
     ) -> str:
-        """Get transcript text within time range.
-        
-        Args:
-            segments: List of transcript segments
-            start_time: Start time in seconds
-            end_time: End time in seconds (None for all)
-            
-        Returns:
-            Concatenated transcript text
-        """
+        """Get transcript text within time range."""
         if end_time is None:
             end_time = float('inf')
         
@@ -221,7 +229,6 @@ class AudioExtractor:
     
     def _compute_video_id(self, video_path: Path) -> str:
         """Compute unique video ID from file content."""
-        # Use first 8KB + file size as hash input
         content = video_path.read_bytes()[:8192]
         size = str(video_path.stat().st_size).encode()
         return hashlib.md5(content + size).hexdigest()[:12]

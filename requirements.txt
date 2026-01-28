@@ -1,0 +1,15 @@
+# Core dependencies
+openai>=1.0.0
+pydantic>=2.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
+pillow>=10.0.0
+
+# Video processing (Apache-2.0)
+decord>=0.6.0
+
+# Audio transcription (MIT License)
+openai-whisper>=20231117
+
+# Testing
+pytest>=7.0.0

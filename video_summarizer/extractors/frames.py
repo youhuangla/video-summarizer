@@ -42,17 +42,19 @@ class FrameExtractor:
     Stage 2 (Dense): High-frequency sampling within chapters
     """
     
-    def __init__(self, cache_dir: str = "./cache/frames"):
+    def __init__(self, cache_dir: str = "./cache/frames", resize_to: tuple = None):
         """Initialize frame extractor.
         
         Args:
             cache_dir: Directory to cache extracted frames
+            resize_to: Optional (width, height) to resize frames for VRAM saving
         """
         if not DECORD_AVAILABLE:
             raise ImportError("decord and PIL are required. Install: uv pip install decord pillow")
         
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.resize_to = resize_to  # (width, height) or None for original size
     
     def extract_uniform(
         self,
@@ -106,8 +108,10 @@ class FrameExtractor:
             if not frame_path.exists():
                 # Extract frame using decord
                 frame = vr[frame_idx].asnumpy()
-                # Convert to PIL Image and save
+                # Convert to PIL Image and resize if needed
                 img = Image.fromarray(frame)
+                if self.resize_to:
+                    img = img.resize(self.resize_to, Image.Resampling.LANCZOS)
                 img.save(frame_path, quality=85)
             
             frames.append(FrameInfo(
@@ -162,6 +166,8 @@ class FrameExtractor:
             if not frame_path.exists():
                 frame = vr[frame_idx].asnumpy()
                 img = Image.fromarray(frame)
+                if self.resize_to:
+                    img = img.resize(self.resize_to, Image.Resampling.LANCZOS)
                 img.save(frame_path, quality=90)  # Higher quality for dense frames
             
             frames.append(FrameInfo(

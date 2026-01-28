@@ -51,7 +51,8 @@ class VideoSummarizerPipeline:
             cache_dir=self.config.cache_dir
         )
         self.frame_extractor = FrameExtractor(
-            cache_dir=f"{self.config.cache_dir}/frames"
+            cache_dir=f"{self.config.cache_dir}/frames",
+            resize_to=(self.config.image_width, self.config.image_height) if self.config.image_width else None
         )
         self.chapter_analyzer = ChapterAnalyzer(
             api_key=self.config.api_key,

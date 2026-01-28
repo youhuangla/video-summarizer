@@ -9,9 +9,11 @@ def test_default_config():
     """Test default configuration values."""
     config = SummarizerConfig()
     assert config.segment_duration == 600
-    assert config.sparse_frame_count == 20
-    assert config.model == "Qwen3vl-30B-instruct-XH-NL"
-    assert config.dense_fps == 0.5
+    assert config.sparse_frame_count == 8  # Reduced for local VLM
+    assert config.model == "GLM46V-Flash"  # Local VLM model
+    assert config.dense_fps == 0.1  # 1 frame per 10 seconds
+    assert config.image_width == 640  # Resized for VRAM saving
+    assert config.image_height == 480
 
 
 def test_config_from_env():

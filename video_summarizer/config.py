@@ -23,15 +23,20 @@ class SummarizerConfig:
     # API Configuration (Local OpenAI-compatible API)
     api_key: str = "EMPTY"  # Local APIs often don't need real key
     base_url: str = "http://127.0.0.1:1234/v1"
-    model: str = "Qwen3vl-30B-instruct-XH-NL"
+    model: str = "GLM46V-Flash"
     
-    # Video Processing
+    # Video Processing (Optimized for local VLM)
     segment_duration: int = 600  # Split videos longer than 10 minutes
     overlap_duration: int = 30   # Overlap between segments
-    sparse_frame_count: int = 20  # Stage 1: frames for chapter detection
-    dense_fps: float = 0.5        # Stage 2: frames per second in chapters
+    sparse_frame_count: int = 8   # Stage 1: frames for chapter detection (reduced for local VLM)
+    dense_fps: float = 0.1        # Stage 2: frames per second (1 frame per 10 seconds)
     min_chapter_duration: int = 30  # Minimum chapter length in seconds
-    max_chapters: int = 8
+    max_chapters: int = 6         # Reduced to save memory
+    
+    # Image Processing
+    image_width: int = 640        # Resize frames to save VRAM
+    image_height: int = 480
+    image_quality: int = 85       # JPEG quality
     
     # Output
     output_dir: str = "./output"

@@ -10,6 +10,8 @@ Orchestrates the entire summarization process:
 """
 
 import time
+import re
+from datetime import datetime
 from pathlib import Path
 from typing import Union, List, Dict
 from dataclasses import dataclass
@@ -61,7 +63,16 @@ class VideoSummarizerPipeline:
             base_url=self.config.base_url,
             model=self.config.model
         )
-        self.formatter = MarkdownFormatter()
+        # Sync auto-detected model name back to config
+        if self.chapter_analyzer.vlm.model:
+            self.config.model = self.chapter_analyzer.vlm.model
+        
+        self.formatter = MarkdownFormatter(
+            output_timestamp=self.config.output_timestamp,
+            output_model_in_filename=self.config.output_model_in_filename,
+            output_keep_latest=self.config.output_keep_latest,
+            output_time_format=self.config.output_time_format
+        )
     
     def summarize(
         self,
@@ -128,6 +139,17 @@ class VideoSummarizerPipeline:
         
         # Step 5: Format output
         print("[5/6] Formatting output...")
+        
+        # Generate timestamp and model short name for filename
+        timestamp = datetime.now().strftime(self.config.output_time_format)
+        model_short = self._get_model_shortname()
+        
+        metadata_dict = {
+            "timestamp": timestamp,
+            "model_short": model_short,
+            "model_full": self.config.model or "unknown"
+        }
+        
         if output_path is None:
             output_path = Path(self.config.output_dir) / f"{video_path.stem}_summary.md"
         else:
@@ -138,7 +160,9 @@ class VideoSummarizerPipeline:
             duration=metadata.duration,
             overall_summary=overall_summary,
             chapters=chapters,
-            output_path=output_path
+            output_path=output_path,
+            output_dir=Path(self.config.output_dir),
+            metadata=metadata_dict
         )
         print()
         
@@ -294,6 +318,20 @@ class VideoSummarizerPipeline:
 """
         
         return self.chapter_analyzer.vlm.generate_text(prompt, max_tokens=300)
+    
+    def _get_model_shortname(self) -> str:
+        """Generate short model name for filename.
+        
+        Returns:
+            Short model identifier (max 20 chars, alphanumeric only)
+        """
+        if not self.config.model or self.config.model == "default":
+            return "unknown"
+        
+        # Take first 20 chars and keep only alphanumeric
+        short = self.config.model[:20]
+        short = re.sub(r'[^a-zA-Z0-9]', '', short)
+        return short if short else "model"
     
     def _fmt_time(self, seconds: float) -> str:
         """Format time as MM:SS."""

@@ -47,6 +47,11 @@ output/
 cache/
 frames/
 
+# Output files (all formats)
+*.pdf
+*.docx
+*.html
+
 # Environment
 .env
 .env.local

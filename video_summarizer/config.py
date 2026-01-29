@@ -48,6 +48,12 @@ class SummarizerConfig:
     cache_dir: str = "./cache"
     enable_cache: bool = True
     
+    # Output filename configuration (for CI/CD comparison)
+    output_timestamp: bool = True           # Add timestamp suffix to filename
+    output_model_in_filename: bool = True   # Include model short name in filename
+    output_keep_latest: bool = True         # Maintain a "latest" copy without timestamp
+    output_time_format: str = "%Y%m%d_%H%M%S"  # Timestamp format
+    
     def __post_init__(self):
         # Allow overriding via environment variables
         env_key = os.getenv("OPENAI_API_KEY")

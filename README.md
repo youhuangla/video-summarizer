@@ -44,6 +44,36 @@ uv pip install -r requirements.txt
 | [openai](https://github.com/openai/openai-python) | Apache-2.0 | API 客户端 |
 | Whisper | - | 本地 HTTP 服务语音识别 |
 
+## 使用前提
+
+⚠️ **运行前请确保以下服务已启动：**
+
+### 1. 语音识别服务 (Whisper)
+
+需要启动本地 Whisper HTTP 服务：
+
+```bash
+# 默认端口: 18181
+# 可通过环境变量配置: WHISPER_API_BASE
+```
+
+### 2. 视觉语言模型服务 (VLM)
+
+需要启动兼容 OpenAI API 格式的 VLM 服务：
+
+| 推荐模型 | 启动方式 | 说明 |
+|---------|---------|------|
+| **Qwen3-VL** | 玲珑星核 | 推荐，效果较好 |
+| **GLM-4.6V** | 玲珑星核 | 可用，但占用资源较大可能报错 |
+
+```bash
+# 默认端口: 1234
+# 可通过环境变量配置: OPENAI_BASE_URL
+```
+
+> 💡 **提示**: 使用玲珑星核管理本地模型，可同时启动 Whisper 和 VLM 服务。
+> ⚠️ **注意**: GLM-4.6V 模型体积较大，显存不足时可能导致 OOM 错误，建议优先使用 Qwen3-VL。
+
 ## 使用方法
 
 ### 方式 1: 命令行交互

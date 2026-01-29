@@ -21,13 +21,13 @@ class SummarizerConfig:
     """
     
     # API Configuration (Local OpenAI-compatible API)
-    api_key: str = "novaai"  # For local Whisper API
+    api_key: str = "123"  # API key for local VLM service
     base_url: str = "http://127.0.0.1:1234/v1"  # VLM API
-    model: str = "GLM46V-Flash"
+    model: str = None  # Auto-detect from server
     
     # Whisper API Configuration
-    whisper_api_key: str = "novaai"
-    whisper_base_url: str = "http://127.0.0.1:8281/v1"  # NovaAI Whisper API
+    whisper_api_key: str = ""
+    whisper_base_url: str = "http://127.0.0.1:18181/v1"  # Direct whisper.cpp API
     whisper_model: str = "whisper-1"
     
     # Video Processing (Optimized for local VLM)

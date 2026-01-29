@@ -6,6 +6,7 @@ video frames and generating summaries.
 
 import json
 import base64
+import requests
 from pathlib import Path
 from typing import List, Union, Optional
 
@@ -32,25 +33,30 @@ class KimiClient:
             base_url: API base URL
             model: Model name (if None, will be auto-detected)
         """
-        if not OPENAI_AVAILABLE:
-            raise ImportError("openai is required. Install: uv pip install openai")
-        
         if not api_key:
             api_key = "EMPTY"
         
         self.api_key = api_key
-        self.client = openai.OpenAI(api_key=api_key, base_url=base_url)
-        self.model = model
+        self.base_url = base_url.rstrip('/')
+        self.headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
         
         # Auto-detect model if not specified
+        self.model = model
         if self.model is None:
             try:
-                models = self.client.models.list()
-                if models.data:
-                    self.model = models.data[0].id
-                    print(f"Auto-detected model: {self.model}")
+                resp = requests.get(f"{self.base_url}/models", headers=self.headers, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    if data.get('data'):
+                        self.model = data['data'][0]['id']
+                        print(f"Auto-detected model: {self.model}")
             except Exception:
-                self.model = "default"
+                pass
+        if self.model is None:
+            self.model = "default"
     
     def analyze_images(
         self,
@@ -80,14 +86,21 @@ class KimiClient:
                 "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}
             })
         
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": content}],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
+        data = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
         
-        return response.choices[0].message.content
+        resp = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=self.headers,
+            json=data,
+            timeout=300
+        )
+        resp.raise_for_status()
+        return resp.json()['choices'][0]['message']['content']
     
     def generate_text(
         self,
@@ -105,14 +118,21 @@ class KimiClient:
         Returns:
             Generated text
         """
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
+        data = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        }
         
-        return response.choices[0].message.content
+        resp = requests.post(
+            f"{self.base_url}/chat/completions",
+            headers=self.headers,
+            json=data,
+            timeout=300
+        )
+        resp.raise_for_status()
+        return resp.json()['choices'][0]['message']['content']
     
     def _encode_image(self, image_path: Union[str, Path]) -> str:
         """Encode image to base64."""

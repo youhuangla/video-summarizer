@@ -66,8 +66,8 @@ class ChapterAnalyzer:
 - 总时长: {duration:.0f}秒
 - 关键帧时间点: {frame_timestamps}
 
-字幕节选（前3000字符）：
-{transcript_text[:3000]}
+字幕节选（前8000字符）：
+{transcript_text[:8000]}
 
 任务：
 1. 识别 {min(3, int(duration/60))}-{min(max_chapters, max(3, int(duration/120)))} 个主要章节
@@ -140,7 +140,7 @@ class ChapterAnalyzer:
         prompt = f"""基于以下视频帧和字幕，为"{title_hint}"这个章节生成详细摘要。
 
 字幕内容：
-{transcript_text[:4000]}
+{transcript_text[:12000]}
 
 任务：
 1. 概括这个章节的核心内容

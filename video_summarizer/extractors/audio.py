@@ -6,6 +6,7 @@ then transcribes using Whisper HTTP API.
 
 import hashlib
 import json
+import os
 import requests
 import subprocess
 from pathlib import Path
@@ -20,6 +21,9 @@ except ImportError:
 
 WHISPER_API_BASE = "http://127.0.0.1:18181/v1"  # Direct whisper.cpp API
 WHISPER_MODEL = "whisper-1"
+
+# Default FFmpeg path (can be overridden via environment variable)
+DEFAULT_FFMPEG_PATH = os.getenv("FFMPEG_PATH", "ffmpeg")
 
 
 class TranscriptSegment:
@@ -46,7 +50,8 @@ class AudioExtractor:
         api_base: str = WHISPER_API_BASE,
         api_key: str = "",
         cache_dir: str = "./cache",
-        model: str = WHISPER_MODEL
+        model: str = WHISPER_MODEL,
+        ffmpeg_path: str = None
     ):
         """Initialize audio extractor.
         
@@ -55,6 +60,7 @@ class AudioExtractor:
             api_key: API key (optional for local)
             cache_dir: Directory to cache transcription results
             model: Whisper model name
+            ffmpeg_path: Path to ffmpeg executable (auto-detected if None)
         """
         self.api_base = api_base.rstrip('/')
         self.api_key = api_key
@@ -62,9 +68,35 @@ class AudioExtractor:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.model = model
         
+        # Find FFmpeg
+        self.ffmpeg_path = ffmpeg_path or self._find_ffmpeg()
+        
         # Audio extraction cache
         self.audio_cache_dir = Path(cache_dir) / "audio"
         self.audio_cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def _find_ffmpeg(self) -> str:
+        """Find FFmpeg executable."""
+        # Check environment variable
+        if os.getenv("FFMPEG_PATH"):
+            return os.getenv("FFMPEG_PATH")
+        
+        # Check common WinGet path
+        winget_ffmpeg = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages" / "Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe" / "ffmpeg-8.0.1-full_build" / "bin" / "ffmpeg.exe"
+        if winget_ffmpeg.exists():
+            print(f"Found FFmpeg: {winget_ffmpeg}")
+            return str(winget_ffmpeg)
+        
+        # Try to find in PATH
+        try:
+            result = subprocess.run(["where", "ffmpeg"], capture_output=True, text=True)
+            if result.returncode == 0:
+                return "ffmpeg"
+        except Exception:
+            pass
+        
+        # Default fallback
+        return "ffmpeg"
     
     def extract_transcript(
         self,
@@ -128,7 +160,7 @@ class AudioExtractor:
         try:
             # Use FFmpeg to extract audio
             cmd = [
-                "ffmpeg",
+                self.ffmpeg_path,
                 "-i", str(video_path),
                 "-vn",  # No video
                 "-acodec", "pcm_s16le",  # PCM 16-bit
@@ -138,7 +170,7 @@ class AudioExtractor:
                 str(audio_path)
             ]
             
-            print(f"Running: ffmpeg -i {video_path.name} ...")
+            print(f"Running: {Path(self.ffmpeg_path).name} -i [video] ...")
             result = subprocess.run(
                 cmd,
                 capture_output=True,

@@ -13,6 +13,7 @@
 - 🎯 **智能章节分割** - AI 识别内容主题转换点
 - 💾 **转录和抽帧结果缓存** - 避免重复处理
 - 🔊 **使用本地 Whisper** - HTTP API 接口 (http://127.0.0.1:18181/v1/audio/)
+- 🔌 **兼容任意 OpenAI API 格式 VLM** - 本地部署 (LM Studio/Ollama) 或云服务
 
 ## 安装
 
@@ -57,8 +58,8 @@ python summarize.py
 
 ```bash
 # 设置 API Key
-set KIMI_API_KEY=your-api-key  # Windows
-export KIMI_API_KEY=your-api-key  # Linux/Mac
+set OPENAI_API_KEY=your-api-key  # Windows
+export OPENAI_API_KEY=your-api-key  # Linux/Mac
 
 # 运行
 python -m video_summarizer
@@ -70,7 +71,8 @@ python -m video_summarizer
 from video_summarizer import VideoSummarizerPipeline, SummarizerConfig
 
 config = SummarizerConfig(
-    kimi_api_key="your-api-key"
+    api_key="your-api-key",
+    base_url="http://127.0.0.1:1234/v1"
 )
 
 pipeline = VideoSummarizerPipeline(config)
@@ -85,7 +87,8 @@ print(f"输出文件: {result.output_path}")
 复制 `.env.example` 为 `.env` 并填写：
 
 ```bash
-KIMI_API_KEY=your-api-key-here
+OPENAI_API_KEY=your-api-key-here
+OPENAI_BASE_URL=http://127.0.0.1:1234/v1
 ```
 
 或在代码中配置：
@@ -94,13 +97,20 @@ KIMI_API_KEY=your-api-key-here
 from video_summarizer import SummarizerConfig
 
 config = SummarizerConfig(
-    kimi_api_key="your-key",
-    segment_duration=600,  # 分段时长（秒）
-    sparse_frame_count=20, # 稀疏采样帧数
-    dense_fps=0.5,         # 密集采样帧率
-    max_chapters=8,        # 最大章节数
+    api_key="your-key",
+    base_url="http://127.0.0.1:1234/v1",
+    model="your-model-name",  # 可选，自动检测
+    segment_duration=600,     # 分段时长（秒）
+    sparse_frame_count=20,    # 稀疏采样帧数
+    dense_fps=0.5,            # 密集采样帧率
+    max_chapters=8,           # 最大章节数
 )
 ```
+
+### 支持的 VLM 服务
+
+- **本地部署**: LM Studio, Ollama, vLLM
+- **云服务**: 任何 OpenAI 兼容 API
 
 ## 输出示例
 
@@ -151,9 +161,9 @@ video-summarizer/
 │   │   ├── audio.py        # 音频转录 (HTTP API)
 │   │   └── frames.py       # 帧提取 (金字塔采样)
 │   ├── analyzers/
-│   │   └── chapters.py     # 章节分析 (Kimi VLM)
+│   │   └── chapters.py     # 章节分析 (VLM)
 │   ├── utils/
-│   │   └── kimi_client.py  # Kimi API 客户端
+│   │   └── vlm_client.py   # VLM API 客户端
 │   └── output/
 │       └── formatter.py    # Markdown 输出
 ├── tests/                  # 测试文件
@@ -173,7 +183,7 @@ pytest tests/ -v
 
 - [Video-Browser](https://github.com/chrisx599/Video-Browser) - 论文实现参考与灵感来源
 - [decord](https://github.com/dmlc/decord) - 高效视频解码
-- [Kimi](https://www.moonshot.cn/) - VLM 能力支持
+- [Kimi](https://www.moonshot.cn/) - 项目开发过程中使用的 AI 编程助手
 
 ## License
 

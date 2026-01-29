@@ -1,7 +1,7 @@
-"""Kimi VLM API client.
+"""VLM API client (OpenAI-compatible).
 
-Provides interface to Kimi Vision-Language Model for analyzing
-video frames and generating summaries.
+Provides interface to Vision-Language Models via OpenAI-compatible API
+for analyzing video frames and generating summaries.
 """
 
 import json
@@ -17,8 +17,13 @@ except ImportError:
     OPENAI_AVAILABLE = False
 
 
-class KimiClient:
-    """Client for Kimi VLM API (OpenAI-compatible)."""
+class VLMClient:
+    """Client for VLM API (OpenAI-compatible).
+    
+    Supports any OpenAI-compatible API including:
+    - Local: LM Studio, Ollama, vLLM
+    - Cloud: OpenAI, Moonshot, etc.
+    """
     
     def __init__(
         self,
@@ -29,7 +34,7 @@ class KimiClient:
         """Initialize OpenAI-compatible client.
         
         Args:
-            api_key: API key (use "EMPTY" for local APIs)
+            api_key: API key (use "EMPTY" or any string for local APIs)
             base_url: API base URL
             model: Model name (if None, will be auto-detected)
         """
@@ -65,7 +70,7 @@ class KimiClient:
         max_tokens: int = 4096,
         temperature: float = 0.3
     ) -> str:
-        """Analyze images with Kimi VLM.
+        """Analyze images with VLM.
         
         Args:
             images: List of image paths

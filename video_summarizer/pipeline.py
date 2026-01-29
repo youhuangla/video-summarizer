@@ -293,7 +293,7 @@ class VideoSummarizerPipeline:
 请用一句话概括视频主题，然后列出3个核心要点。只输出摘要文本，不要JSON格式。
 """
         
-        return self.chapter_analyzer.kimi.generate_text(prompt, max_tokens=300)
+        return self.chapter_analyzer.vlm.generate_text(prompt, max_tokens=300)
     
     def _fmt_time(self, seconds: float) -> str:
         """Format time as MM:SS."""

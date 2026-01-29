@@ -1,4 +1,4 @@
-"""Chapter analysis using Kimi VLM.
+"""Chapter analysis using VLM.
 
 Implements the chapter boundary detection and summary generation
 using pyramidal perception approach inspired by Video-Browser.
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional
 from pathlib import Path
 
-from video_summarizer.utils.kimi_client import KimiClient
+from video_summarizer.utils.vlm_client import VLMClient
 
 
 @dataclass
@@ -35,7 +35,7 @@ class ChapterAnalyzer:
             base_url: API base URL
             model: Model name (optional)
         """
-        self.kimi = KimiClient(api_key=api_key, base_url=base_url, model=model)
+        self.vlm = VLMClient(api_key=api_key, base_url=base_url, model=model)
     
     def detect_chapters(
         self,
@@ -100,8 +100,8 @@ class ChapterAnalyzer:
         # Get frame paths
         frame_paths = [f.path for f in frames]
         
-        # Call Kimi VLM
-        response = self.kimi.analyze_images(
+        # Call VLM
+        response = self.vlm.analyze_images(
             images=frame_paths,
             prompt=prompt,
             max_tokens=2048,
@@ -160,7 +160,7 @@ class ChapterAnalyzer:
         
         frame_paths = [f.path for f in frames[:6]]  # Limit frames
         
-        response = self.kimi.analyze_images(
+        response = self.vlm.analyze_images(
             images=frame_paths,
             prompt=prompt,
             max_tokens=2048,
